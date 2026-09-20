@@ -1,0 +1,426 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Auth (Auth.js / @auth/prisma-adapter)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  phone         String?
+  cpf           String?
+  image         String?
+  role          UserRole  @default(CUSTOMER)
+
+  accounts Account[]
+  sessions Session[]
+
+  addresses Address[]
+  carts     Cart[]
+  orders    Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+// Only needed if/when an OAuth provider is added — Credentials login (used
+// today) works via User.passwordHash + JWT sessions, without these rows.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+/**
+ * Backing store pra rate limiting de login/cadastro (ver lib/rate-limit.ts).
+ * Serverless (Vercel) não mantém estado em memória entre invocações de
+ * função, então isso precisa ser persistido — banco é o jeito confiável.
+ * `identifier` é "ip:<ip>" ou "email:<email>". Linhas antigas não são
+ * limpas automaticamente ainda — tabela é pequena o suficiente pra não
+ * importar nessa fase, mas é candidata a um job de limpeza periódico.
+ */
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  identifier String
+  action     String
+  success    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([identifier, action, success, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Customer data
+// ---------------------------------------------------------------------------
+
+model Address {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  label      String?
+  recipient  String?
+  phone      String?
+  zipCode    String
+  street     String
+  number     String
+  complement String?
+  district   String
+  city       String
+  state      String
+  country    String  @default("BR")
+  isDefault  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Catalog
+// ---------------------------------------------------------------------------
+
+model Product {
+  id               String    @id @default(cuid())
+  name             String
+  slug             String    @unique
+  description      String?
+  shortDescription String?
+  price            Decimal   @db.Decimal(10, 2)
+  compareAtPrice   Decimal?  @db.Decimal(10, 2)
+  sku              String?   @unique
+  stock            Int       @default(0)
+  imageUrl         String?
+  isActive         Boolean   @default(true)
+  categoryId       String?
+  category         Category? @relation(fields: [categoryId], references: [id])
+
+  // Medidas por unidade pra cotação de frete (Melhor Envio). Null = usa a
+  // caixa padrão de lib/shipping-rules.ts.
+  weightGrams Int?
+  heightCm    Int?
+  widthCm     Int?
+  lengthCm    Int?
+
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  coupons    Coupon[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  imageUrl String?
+  products Product[]
+  coupons  Coupon[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Cart
+// ---------------------------------------------------------------------------
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId String?
+  items     CartItem[]
+
+  // Cupom aplicado nesse carrinho (revalidado a cada leitura — ver
+  // lib/coupons.ts — pra não confiar num desconto que ficou obsoleto
+  // enquanto o carrinho ficou parado).
+  couponId String?
+  coupon   Coupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([sessionId])
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int     @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+}
+
+// ---------------------------------------------------------------------------
+// Marketing (cupons, banners, conteúdo do site)
+// ---------------------------------------------------------------------------
+
+model Coupon {
+  id            String       @id @default(cuid())
+  code          String       @unique
+  type          DiscountType @default(PERCENT)
+  value         Decimal      @db.Decimal(10, 2) // % ou valor fixo, conforme `type`
+  minOrderValue Decimal?     @db.Decimal(10, 2)
+  maxUses       Int? // null = ilimitado
+  usedCount     Int          @default(0)
+  isActive      Boolean      @default(true)
+  startsAt      DateTime?
+  expiresAt     DateTime?
+
+  // Escopo do cupom — só um deles (ou nenhum) fica preenchido:
+  // nenhum = loja inteira; productId = só esse produto; categoryId = só
+  // essa categoria. Aplicado/validado em lib/coupons.ts (checkout).
+  productId  String?
+  product    Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  orders Order[]
+  carts  Cart[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
+model Banner {
+  id       String    @id @default(cuid())
+  title    String
+  subtitle String?
+  imageUrl String
+  linkUrl  String?
+  position Int       @default(0)
+  isActive Boolean   @default(true)
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * Conteúdo editável do site (textos/seções da home + configs gerais da
+ * loja) como chave/valor — evita criar uma tabela nova pra cada texto.
+ * `group` organiza a UI do admin (ex: "home", "geral", "contato").
+ */
+model SiteSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String @db.Text
+  label String
+  group String @default("geral")
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * "Demandas" — pedidos de contato/interesse de clientes (form público).
+ */
+model Lead {
+  id      String     @id @default(cuid())
+  name    String
+  email   String
+  phone   String?
+  message String     @db.Text
+  status  LeadStatus @default(NEW)
+  source  String? // ex: "contato", "checkout-erro"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+enum LeadStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  ARCHIVED
+}
+
+// ---------------------------------------------------------------------------
+// Orders
+// ---------------------------------------------------------------------------
+
+model Order {
+  id          String  @id @default(cuid())
+  orderNumber String  @unique
+  userId      String?
+  user        User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  customerName  String
+  customerEmail String
+  customerPhone String?
+  customerCpf   String?
+
+  status        OrderStatus   @default(PENDING_PAYMENT)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  couponId String?
+  coupon   Coupon? @relation(fields: [couponId], references: [id])
+
+  subtotal      Decimal @db.Decimal(10, 2)
+  shippingTotal Decimal @default(0) @db.Decimal(10, 2)
+  discountTotal Decimal @default(0) @db.Decimal(10, 2)
+  total         Decimal @db.Decimal(10, 2)
+
+  shippingZipCode    String
+  shippingStreet     String
+  shippingNumber     String
+  shippingComplement String?
+  shippingDistrict   String
+  shippingCity       String
+  shippingState      String
+  shippingCountry    String  @default("BR")
+
+  trackingCode      String?
+  trackingUrl       String?
+  carrier           String?
+  estimatedDelivery DateTime?
+
+  // Melhor Envio (ver lib/melhor-envio.ts): serviço escolhido no checkout,
+  // id do envio criado no carrinho deles depois do pagamento e o último
+  // status que eles reportaram ("sending" = inserção em andamento,
+  // "error" = falhou, detalhe em shippingError — só pro admin, OrderEvent
+  // aparece pro cliente).
+  shippingServiceId    Int?
+  shippingDeliveryDays Int?
+  melhorEnvioId        String? @unique
+  shippingStatus       String?
+  shippingError        String?
+
+  items    OrderItem[]
+  payments Payment[]
+  events   OrderEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([customerEmail])
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  name      String
+  sku       String?
+  imageUrl  String?
+  unitPrice Decimal @db.Decimal(10, 2)
+  quantity  Int
+  total     Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  provider          PaymentProvider
+  providerPaymentId String?         @unique
+  providerSessionId String?
+  status            PaymentStatus   @default(PENDING)
+  amount            Decimal         @db.Decimal(10, 2)
+  paymentMethod     String?
+  paidAt            DateTime?
+  rawPayload        Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderEvent {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  status    String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  MERCADO_PAGO
+  STRIPE
+}

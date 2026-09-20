@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: var(--font-archivo), sans-serif;
+  --font-heading: var(--font-oswald), sans-serif;
+  --font-body: var(--font-inter), sans-serif;
+
+  --color-bg: #f7f5f0;
+  --color-surface: #ffffff;
+  --color-ink: #0a0a0a;
+  --color-black: #000000;
+  --color-graphite: #171717;
+  --color-gray: #666666;
+  --color-gray-light: #999590;
+  --color-border: #e5e5e5;
+  --color-white: #ffffff;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+::selection {
+  background-color: var(--color-ink);
+  color: var(--color-white);
+}
+
+.eyebrow {
+  font-family: var(--font-heading);
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  font-weight: 600;
+}
+
+.reveal-item {
+  opacity: 0;
+}
+
+/*
+ * Esteira infinita (ver components/Marquee.tsx). Cada cópia do conteúdo
+ * anima -100%-gap da PRÓPRIA largura (não da largura combinada) — assim o
+ * loop fica exato independente do tamanho real do conteúdo, sem precisar
+ * medir nada em JS.
+ */
+@keyframes marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% - var(--marquee-gap, 32px)));
+  }
+}
+
+@keyframes marquee-right {
+  from {
+    transform: translateX(calc(-100% - var(--marquee-gap, 32px)));
+  }
+  to {
+    transform: translateX(0);
+  }
+}
