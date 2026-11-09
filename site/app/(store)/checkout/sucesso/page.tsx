@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
 import { ORDER_STATUS_LABELS } from "@/lib/orders";
+import MetaPixelEvent from "@/components/MetaPixelEvent";
 import { NOINDEX } from "@/lib/seo";
 
 export const metadata: Metadata = { title: "Pedido confirmado", ...NOINDEX };
@@ -20,6 +21,15 @@ export default async function CheckoutSucessoPage({
   return (
     <section className="flex min-h-[70vh] items-center justify-center px-5 py-16 md:px-8">
       <div className="w-full max-w-md text-center">
+        {order && order.status === "PAID" && (
+          // eventId = orderNumber: mesmo ID do Purchase enviado pela API de
+          // Conversões em apply-event.ts, pra deduplicar os dois no Meta.
+          <MetaPixelEvent
+            event="Purchase"
+            eventId={order.orderNumber}
+            data={{ value: Number(order.total), currency: "BRL", order_id: order.orderNumber }}
+          />
+        )}
         <p className="eyebrow text-xs text-gray">Pedido confirmado</p>
         <h1 className="mt-2 font-display text-3xl uppercase text-ink">
           Pedido confirmado

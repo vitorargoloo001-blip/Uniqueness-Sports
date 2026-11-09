@@ -9,6 +9,7 @@ import { formatPrice, formatInstallments } from "@/lib/format";
 import { absoluteUrl, SITE_NAME } from "@/lib/seo";
 import AddToCartButton from "@/components/AddToCartButton";
 import OfferBadge from "@/components/OfferBadge";
+import MetaPixelEvent from "@/components/MetaPixelEvent";
 
 export async function generateStaticParams() {
   const products = await prisma.product.findMany({ select: { slug: true } });
@@ -80,6 +81,16 @@ export default async function ProdutoPage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <MetaPixelEvent
+        event="ViewContent"
+        data={{
+          content_ids: [product.id],
+          content_name: product.name,
+          content_type: "product",
+          value: product.price,
+          currency: "BRL",
+        }}
       />
       <div className="mx-auto max-w-5xl">
         <nav aria-label="Breadcrumb" className="font-heading text-xs uppercase tracking-[0.14em] text-gray">
@@ -157,7 +168,7 @@ export default async function ProdutoPage({
               </ul>
             )}
 
-            <AddToCartButton productId={product.id} stock={product.stock} />
+            <AddToCartButton productId={product.id} stock={product.stock} price={product.price} />
 
             <div className="mt-4 space-y-1 text-xs text-gray">
               {product.stock > 0 && product.stock <= 5 && (

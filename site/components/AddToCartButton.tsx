@@ -2,13 +2,16 @@
 
 import { useState, useTransition } from "react";
 import { addToCart } from "@/lib/cart";
+import { trackEvent } from "@/lib/meta-pixel";
 
 export default function AddToCartButton({
   productId,
   stock,
+  price,
 }: {
   productId: string;
   stock: number;
+  price: number;
 }) {
   const [quantity, setQuantity] = useState(1);
   const [isPending, startTransition] = useTransition();
@@ -20,6 +23,14 @@ export default function AddToCartButton({
     setMessage(null);
     startTransition(async () => {
       const result = await addToCart(productId, quantity);
+      if (result.success) {
+        trackEvent("AddToCart", {
+          content_ids: [productId],
+          content_type: "product",
+          value: price * quantity,
+          currency: "BRL",
+        });
+      }
       setMessage(
         result.success
           ? { type: "ok", text: "Adicionado ao carrinho." }

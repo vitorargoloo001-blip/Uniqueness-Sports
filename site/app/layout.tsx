@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import AnnouncementBar from "@/components/AnnouncementBar";
+import MetaPixel from "@/components/MetaPixel";
 import { SITE_NAME, SITE_DESCRIPTION, SITE_KEYWORDS, BRAND_TAGLINE, SITE_URL } from "@/lib/seo";
 
 // Condensed/heavy display placeholder (design-guide.md: official typeface
@@ -87,6 +88,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${display.variable} ${oswald.variable} ${inter.variable}`}
     >
       <body className="bg-bg text-ink antialiased">
+        <MetaPixel />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}

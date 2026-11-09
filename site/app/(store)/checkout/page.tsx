@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/format";
 import CheckoutForm from "@/components/store/CheckoutForm";
 import CouponInput from "@/components/store/CouponInput";
 import { CheckoutShippingProvider, CheckoutTotals } from "@/components/store/CheckoutShipping";
+import MetaPixelEvent from "@/components/MetaPixelEvent";
 import { NOINDEX } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -63,6 +64,19 @@ export default async function CheckoutPage() {
   return (
     <section className="px-5 py-14 md:px-8">
       <div className="mx-auto max-w-6xl">
+        <MetaPixelEvent
+          event="InitiateCheckout"
+          data={{
+            value: cart.total,
+            currency: "BRL",
+            num_items: cart.items.reduce((sum, item) => sum + item.quantity, 0),
+            contents: cart.items.map((item) => ({
+              id: item.productId,
+              quantity: item.quantity,
+              item_price: item.product.price,
+            })),
+          }}
+        />
         <p className="eyebrow text-xs text-gray">Compras</p>
         <h1 className="mt-2 font-display text-4xl uppercase text-ink md:text-5xl">
           Finalizar compra
