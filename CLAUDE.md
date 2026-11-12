@@ -1,11 +1,57 @@
-# MazyOS — Sistema operacional do negócio
+# UNIQUENESS SPORTS — MazyOS
 
-Sua empresa roda em cima desse arquivo. Aqui ficam as regras de operação
-do MazyOS — como o Claude lê o contexto, aprende com correções, mantém
-tudo atualizado e cria skills novas conforme a operação evolui.
+> Sistema operacional da marca. Empresa enxuta: núcleo estratégico
+> centralizado (marca, produto, comunicação, decisões comerciais),
+> com apoio pontual em design, conteúdo, site e operação.
 
-Esse arquivo é editável. Quando o `/instalar` rodar, ele complementa o
-final dessa página com as regras específicas do seu negócio.
+## O que é esse workspace
+
+Operação de marca e conteúdo da Uniqueness Sports — academia que
+fabrica os próprios suplementos, produtos esportivos e lifestyle.
+
+**Estrutura de pastas:**
+- `_memoria/` — quem é a empresa, como falamos, foco atual
+- `identidade/` — marca aplicada em tudo que o sistema gera (logo em `identidade/logo.png`)
+- `marketing/` — campanhas, conteúdo, mídia paga
+- `saidas/` — documentos pontuais
+- `scripts/` — automações e ferramentas de apoio
+- `dados/` — arquivos a analisar
+- `templates/` — moldes usados pelo próprio MazyOS
+- `site/` — código do site oficial (Next.js, e-commerce completo: contas, carrinho, checkout, pagamento, pedidos). Tem seu próprio `site/CLAUDE.md` com comandos e arquitetura
+- `admin/` — painel administrativo privado ("Uniqueness Admin"), projeto Next.js separado do `site/` mas conectado ao mesmo banco de dados. Só usuários `ADMIN` acessam. Tem seu próprio `admin/CLAUDE.md`
+
+## Sobre a empresa
+
+Uniqueness Sports é uma marca de academia que fabrica os próprios
+suplementos, produtos esportivos e lifestyle. Não segue o mercado
+fitness de hype — constrói em cima de constância, básico bem feito
+e presença. Atende quem treina com constância e quer comprar de uma
+marca com identidade, não só preço.
+
+Estrutura enxuta: núcleo estratégico (direção de marca, produto,
+comunicação, comercial) concentrado em poucas pessoas, com apoio
+pontual para design, conteúdo, site e operação — mantendo consistência
+e controle da identidade.
+
+## O que mais fazemos aqui
+
+- Conteúdo semanal que traduz a visão da marca em posts/carrosséis consistentes
+- Peças de identidade visual (old school, premium, esportivo)
+- Site oficial da marca (`site/`, Next.js) — e-commerce completo (contas, carrinho, checkout, pagamento Mercado Pago, pedidos), com painel admin dedicado (`admin/`) — ver `_memoria/estrategia.md`, `site/README.md` e `admin/README.md`
+
+## Tom de voz
+
+Direto, quase manifesto. Old school, premium, sem enfeite. Ver
+`_memoria/preferencias.md` para o guia completo e exemplo real de escrita.
+
+Evitar: jargão de guru, tom de vendedor desesperado, texto "com cara
+de IA" (redondo, explicado demais, sem verdade).
+
+## Regras do sistema
+
+- Toda peça visual (carrossel, post, site) segue `identidade/design-guide.md`
+- Conteúdo publicado ou pontual vai em `saidas/`
+- Campanhas e mídia paga ficam em `marketing/`
 
 ---
 
@@ -35,6 +81,15 @@ usar o contexto naturalmente.
 Antes de executar qualquer tarefa, verificar se existe skill relevante
 em `.claude/skills/`. Se encontrar, seguir as instruções da skill. Se
 não encontrar, executar a tarefa normalmente.
+
+Além das skills locais, a skill global `karpathy-guidelines` (instalada
+em `~/.claude/skills/`, via
+[andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills))
+se aplica automaticamente em qualquer tarefa de código dentro desse
+workspace — principalmente em `scripts/`. Ela reforça: pensar antes de
+codar (assumir nada, perguntar quando incerto), simplicidade (só o que
+foi pedido), mudanças cirúrgicas (não mexer no que não foi pedido) e
+execução orientada a critério de sucesso verificável.
 
 Ao concluir uma tarefa que não tinha skill mas parece repetível (o
 usuário provavelmente vai pedir de novo no futuro), perguntar:

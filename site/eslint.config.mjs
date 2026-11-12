@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Saída do `vercel build`: código gerado, gitignorado, e o ESLint 9 não
+    // lê .gitignore sozinho — sem isso o lint quebra em arquivo que não é nosso.
+    ".vercel/**",
   ]),
 ]);
 

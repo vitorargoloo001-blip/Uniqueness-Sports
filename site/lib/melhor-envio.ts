@@ -2,7 +2,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { ORDER_STATUS_LABELS } from "@/lib/order-status";
-import { applyFreeShipping, DEFAULT_PACKAGE, type ShippingOption } from "@/lib/shipping-rules";
+import { applyFreeShipping, shipmentVolumes, type ShippingOption } from "@/lib/shipping-rules";
 import type { Order, OrderStatus } from "@/lib/generated/prisma/client";
 
 const TOKEN = process.env.MELHOR_ENVIO_TOKEN;
@@ -28,15 +28,14 @@ type ActionResult<T = undefined> =
   | { success: true; data: T }
   | { success: false; error: string };
 
-/** Uma linha do carrinho/pedido, com as medidas por unidade do produto (null = caixa padrão). */
+/** Uma linha do carrinho/pedido. `weightGrams` é o peso do produto por unidade, sem a caixa. */
 export type ShippingItem = {
   id: string;
   quantity: number;
   unitPrice: number;
   weightGrams: number | null;
-  heightCm: number | null;
-  widthCm: number | null;
-  lengthCm: number | null;
+  /** Quantas unidades cabem numa caixa. Null = padrão de shipping-rules. */
+  unitsPerBox: number | null;
 };
 
 type MeQuote = {
@@ -48,10 +47,6 @@ type MeQuote = {
   custom_delivery_time?: number;
   error?: string;
   company?: { name: string };
-  packages?: {
-    weight: string | number;
-    dimensions: { height: string | number; width: string | number; length: string | number };
-  }[];
 };
 
 async function meRequest<T>(path: string, body: unknown): Promise<T> {
@@ -85,20 +80,17 @@ function describeError(data: unknown): string {
   return message ?? error ?? "resposta inesperada";
 }
 
+function declaredValue(items: ShippingItem[]): number {
+  return items.reduce((total, item) => total + item.unitPrice * item.quantity, 0);
+}
+
 async function quote(toPostalCode: string, items: ShippingItem[], services: string): Promise<MeQuote[]> {
   const result = await meRequest<MeQuote[] | MeQuote>("/me/shipment/calculate", {
     from: { postal_code: digits(from("POSTAL_CODE")) },
     to: { postal_code: digits(toPostalCode) },
-    products: items.map((item) => ({
-      id: item.id,
-      weight: (item.weightGrams ?? DEFAULT_PACKAGE.weightGrams) / 1000,
-      height: item.heightCm ?? DEFAULT_PACKAGE.heightCm,
-      width: item.widthCm ?? DEFAULT_PACKAGE.widthCm,
-      length: item.lengthCm ?? DEFAULT_PACKAGE.lengthCm,
-      insurance_value: item.unitPrice,
-      quantity: item.quantity,
-    })),
-    options: { receipt: false, own_hand: false },
+    // Uma entrada por caixa — pedido grande sai em mais de uma.
+    volumes: shipmentVolumes(items),
+    options: { insurance_value: declaredValue(items), receipt: false, own_hand: false },
     services,
   });
   // Com um serviço só no filtro a API devolve o objeto solto, não uma lista.
@@ -201,14 +193,12 @@ export async function sendOrderToMelhorEnvio(orderId: string): Promise<void> {
       quantity: item.quantity,
       unitPrice: Number(item.unitPrice),
       weightGrams: item.product?.weightGrams ?? null,
-      heightCm: item.product?.heightCm ?? null,
-      widthCm: item.product?.widthCm ?? null,
-      lengthCm: item.product?.lengthCm ?? null,
+      unitsPerBox: item.product?.unitsPerBox ?? null,
     }));
 
-    // Recota só o serviço escolhido pra pegar os volumes já empacotados.
+    // Confirma que o serviço escolhido ainda atende esse CEP antes de inserir.
     const [chosen] = await quote(order.shippingZipCode, items, String(order.shippingServiceId));
-    if (!chosen || chosen.error || !chosen.packages?.length) {
+    if (!chosen || chosen.error) {
       throw new Error(chosen?.error ?? "serviço de frete indisponível pra esse CEP");
     }
 
@@ -234,12 +224,8 @@ export async function sendOrderToMelhorEnvio(orderId: string): Promise<void> {
         quantity: item.quantity,
         unitary_value: Number(item.unitPrice),
       })),
-      volumes: chosen.packages.map((pkg) => ({
-        height: Number(pkg.dimensions.height),
-        width: Number(pkg.dimensions.width),
-        length: Number(pkg.dimensions.length),
-        weight: Number(pkg.weight),
-      })),
+      // Mesmas caixas da cotação.
+      volumes: shipmentVolumes(items),
       options: {
         insurance_value: Number(order.subtotal),
         receipt: false,

@@ -26,9 +26,7 @@ export async function getShippingOptionsAction(zipCode: string): Promise<ActionR
       quantity: item.quantity,
       unitPrice: item.product.price,
       weightGrams: item.product.weightGrams,
-      heightCm: item.product.heightCm,
-      widthCm: item.product.widthCm,
-      lengthCm: item.product.lengthCm,
+      unitsPerBox: item.product.unitsPerBox,
     })),
     cart.total,
   );

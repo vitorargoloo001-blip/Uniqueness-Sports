@@ -168,7 +168,13 @@ mensagem verbatim, na hora de cobrar — nunca finge sucesso.
 **Shipping (Melhor Envio, 2026-09-19):** `lib/melhor-envio.ts` (server-only)
 is the whole integration; `lib/shipping-rules.ts` holds the Prisma-free bits
 (free-shipping threshold R$ 299 — keep `components/home/BenefitsBar.tsx`'s
-copy in sync — and the default box for products without measures).
+copy in sync — plus `SHIPPING_BOX` and `shipmentWeightKg`). **Todo pedido sai
+numa caixa única** (18,5 × 9,5 × 12 cm, tara 80 g): a cotação usa o modo
+`package` da API do Melhor Envio, não `products`, com peso = Σ(peso do produto
+× qtd) + tara somada **uma vez só** por envio. Por isso o admin pede só o
+**peso** do produto; as colunas `heightCm`/`widthCm`/`lengthCm` continuam no
+schema mas sem uso. Se algum produto passar a não caber nessa caixa, isso
+precisa virar caixa por produto.
 Checkout quotes via the `getShippingOptionsAction` Server Action
 (`lib/shipping.ts`, always from the server-side cart), and
 `createOrderFromCart` re-quotes independently and rejects a service that's no

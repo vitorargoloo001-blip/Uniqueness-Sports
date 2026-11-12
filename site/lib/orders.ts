@@ -92,9 +92,7 @@ export async function createOrderFromCart(
       quantity: item.quantity,
       unitPrice: Number(item.product.price),
       weightGrams: item.product.weightGrams,
-      heightCm: item.product.heightCm,
-      widthCm: item.product.widthCm,
-      lengthCm: item.product.lengthCm,
+      unitsPerBox: item.product.unitsPerBox,
     })),
     Math.max(0, subtotal - discountTotal),
   );

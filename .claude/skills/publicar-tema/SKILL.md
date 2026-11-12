@@ -18,7 +18,7 @@ Skill orquestradora. Pega um tema → entrega artigo no blog + carrossel + 3 leg
 - **Estratégia de conteúdo:** `marketing/seo/05-estrategia-conteudo.md` (lista mestra de temas, criada pelo `/seo`)
 - **Outras pesquisas SEO:** `marketing/seo/01-pesquisa-demanda.md`, `02-analise-concorrencia.md`, `08-geo-otimizacao-ia.md`
 - **Skill carrossel:** `.claude/skills/carrossel/SKILL.md` — usar pra fase do carrossel
-- **Site (blog):** `site/` — destino dos artigos. Estrutura comum: Astro em `site/astro-site/src/content/blog/`, ou WordPress, ou outro. Se ainda não tiver site, perguntar antes
+- **Site (blog):** `site/` — Next.js 16 (App Router), sem blog/MDX estruturado ainda (site institucional + catálogo, ver `site/README.md`). Se for publicar artigo, perguntar ao usuário onde/como (ex: nova rota `site/app/blog/[slug]/page.tsx` + conteúdo em markdown, ou outro CMS) antes de criar arquivo
 - **Tom de voz:** `_memoria/preferencias.md`
 - **Contexto:** `_memoria/empresa.md`, `identidade/design-guide.md`
 
