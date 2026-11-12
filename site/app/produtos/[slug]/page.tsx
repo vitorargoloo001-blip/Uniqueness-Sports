@@ -7,7 +7,9 @@ import { getProductBySlug } from "@/lib/products";
 import { getProductCopy } from "@/lib/product-copy";
 import { formatPrice, formatInstallments } from "@/lib/format";
 import { absoluteUrl, SITE_NAME } from "@/lib/seo";
+import { FREE_SHIPPING_THRESHOLD } from "@/lib/shipping-rules";
 import AddToCartButton from "@/components/AddToCartButton";
+import ShippingEstimate from "@/components/ShippingEstimate";
 import OfferBadge from "@/components/OfferBadge";
 import MetaPixelEvent from "@/components/MetaPixelEvent";
 
@@ -55,6 +57,10 @@ export default async function ProdutoPage({
 
   const copy = getProductCopy(slug, product);
   const installments = formatInstallments(product.price);
+  const discountPercent =
+    product.compareAtPrice && product.compareAtPrice > product.price
+      ? Math.round((1 - product.price / product.compareAtPrice) * 100)
+      : 0;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -139,7 +145,13 @@ export default async function ProdutoPage({
               <p className="mt-1 text-sm text-gray">{copy.shortDescription}</p>
             )}
 
-            <p className="mt-6 font-heading text-3xl text-ink">
+            {discountPercent > 0 && product.compareAtPrice && (
+              <p className="mt-6 flex items-center gap-2 text-sm text-gray">
+                <span className="line-through">De {formatPrice(product.compareAtPrice)}</span>
+                <span className="eyebrow bg-black px-2 py-1 text-[10px] text-white">{discountPercent}% OFF</span>
+              </p>
+            )}
+            <p className={`${discountPercent > 0 ? "mt-1" : "mt-6"} font-heading text-3xl text-ink`}>
               {formatPrice(product.price)}
             </p>
             {installments && <p className="mt-1 text-sm text-gray">{installments}</p>}
@@ -150,6 +162,19 @@ export default async function ProdutoPage({
                 de desconto nesse produto.
               </p>
             )}
+
+            <AddToCartButton productId={product.id} stock={product.stock} price={product.price} />
+
+            <ul className="mt-4 space-y-1 text-xs text-gray">
+              {product.stock > 0 && product.stock <= 5 && (
+                <li className="text-ink/80">Apenas {product.stock} unidade(s) em estoque.</li>
+              )}
+              <li>Pix, cartão ou boleto — pagamento seguro pelo Mercado Pago, sem sair do site.</li>
+              <li>Entrega para todo o Brasil. Frete grátis acima de {formatPrice(FREE_SHIPPING_THRESHOLD)}.</li>
+              <li>Dúvidas? É só chamar no WhatsApp.</li>
+            </ul>
+
+            {product.stock > 0 && <ShippingEstimate productId={product.id} />}
 
             {copy.description && (
               <p className="mt-6 max-w-md text-base leading-relaxed text-ink/80">
@@ -167,16 +192,6 @@ export default async function ProdutoPage({
                 ))}
               </ul>
             )}
-
-            <AddToCartButton productId={product.id} stock={product.stock} price={product.price} />
-
-            <div className="mt-4 space-y-1 text-xs text-gray">
-              {product.stock > 0 && product.stock <= 5 && (
-                <p className="text-ink/80">Apenas {product.stock} unidade(s) em estoque.</p>
-              )}
-              <p>Pagamento processado com segurança pelo Mercado Pago.</p>
-              <p>Entrega para todo o Brasil — dúvidas, é só chamar no WhatsApp.</p>
-            </div>
           </div>
         </div>
       </div>
