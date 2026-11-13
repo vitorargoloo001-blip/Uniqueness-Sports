@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import LoginForm from "@/components/auth/LoginForm";
 import { NOINDEX } from "@/lib/seo";
@@ -14,7 +15,10 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <p className="eyebrow text-xs text-gray">Bem-vindo de volta</p>
         <h1 className="mt-2 font-display text-3xl uppercase text-ink">Entrar</h1>
-        <LoginForm />
+        {/* LoginForm usa useSearchParams — sem Suspense o build quebra quando o Next pré-renderiza /login. */}
+        <Suspense>
+          <LoginForm />
+        </Suspense>
       </div>
     </section>
   );
