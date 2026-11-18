@@ -15,8 +15,17 @@ export default async function CheckoutSucessoPage({
   const orderNumber = Array.isArray(params.order) ? params.order[0] : params.order;
 
   const order = orderNumber
-    ? await prisma.order.findUnique({ where: { orderNumber } })
+    ? await prisma.order.findUnique({ where: { orderNumber }, include: { items: true } })
     : null;
+
+  // Mesmo id de conteúdo usado pela API de Conversões (apply-event.ts) e pelos
+  // eventos ViewContent/AddToCart (productId) — sem isso a Meta não liga a
+  // compra aos produtos do catálogo.
+  const purchaseContents = (order?.items ?? []).map((item) => ({
+    id: item.productId ?? item.sku ?? item.id,
+    quantity: item.quantity,
+    item_price: Number(item.unitPrice),
+  }));
 
   return (
     <section className="flex min-h-[70vh] items-center justify-center px-5 py-16 md:px-8">
@@ -27,7 +36,15 @@ export default async function CheckoutSucessoPage({
           <MetaPixelEvent
             event="Purchase"
             eventId={order.orderNumber}
-            data={{ value: Number(order.total), currency: "BRL", order_id: order.orderNumber }}
+            data={{
+              value: Number(order.total),
+              currency: "BRL",
+              order_id: order.orderNumber,
+              content_type: "product",
+              content_ids: purchaseContents.map((c) => c.id),
+              contents: purchaseContents,
+              num_items: purchaseContents.reduce((sum, c) => sum + c.quantity, 0),
+            }}
           />
         )}
         <p className="eyebrow text-xs text-gray">Pedido confirmado</p>
