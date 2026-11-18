@@ -194,7 +194,11 @@ lost. Product measures are edited in `../admin/` (Produtos → Embalagem).
 `app/globals.css` under `@theme` and mirror `../identidade/design-guide.md`
 (light/premium palette, reconciled with that file this session).
 
-**Fonts:** `next/font/google` in `app/layout.tsx` — Archivo Black
+**Fonts:** self-hosted via `next/font/local` in `app/layout.tsx`, files in
+`app/fonts/` (Fontsource builds of the Google Fonts, latin subset, OFL) —
+**not** `next/font/google`, whose build-time fetch failed intermittently on
+Vercel and broke production deploys (2026-11-18; `../admin/` got the same fix).
+Archivo Black
 (`font-display`, a placeholder; the brand's official display face isn't
 chosen yet — see the comment above its declaration for a font-swap bug to
 re-check if replacing it), Oswald (`font-heading`), Inter (`font-body`).
