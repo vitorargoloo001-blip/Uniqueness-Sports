@@ -1,7 +1,27 @@
 "use client";
 
+import { useEffect } from "react";
 import Script from "next/script";
-import { META_PIXEL_ID } from "@/lib/meta-pixel";
+import { META_PIXEL_ID, trackEvent } from "@/lib/meta-pixel";
+
+/**
+ * Clique em qualquer link de WhatsApp do site (rodapé, /contato, produto)
+ * vira um evento Contact. Um listener só, no documento, pra não precisar
+ * transformar cada link (a maioria em Server Components) em Client Component.
+ */
+function useWhatsappContactTracking() {
+  useEffect(() => {
+    if (!META_PIXEL_ID) return;
+    function onClick(e: MouseEvent) {
+      const link = (e.target as Element | null)?.closest?.("a[href]");
+      if (link && /wa\.me|api\.whatsapp\.com/.test(link.getAttribute("href") ?? "")) {
+        trackEvent("Contact", { content_name: "WhatsApp" });
+      }
+    }
+    document.addEventListener("click", onClick, { capture: true });
+    return () => document.removeEventListener("click", onClick, { capture: true });
+  }, []);
+}
 
 /**
  * Base do Meta Pixel — carrega fbevents.js, inicializa e dispara o PageView
@@ -10,6 +30,7 @@ import { META_PIXEL_ID } from "@/lib/meta-pixel";
  * configurada.
  */
 export default function MetaPixel() {
+  useWhatsappContactTracking();
   if (!META_PIXEL_ID) return null;
 
   return (

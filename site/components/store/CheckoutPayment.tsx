@@ -6,6 +6,7 @@ import { Payment, initMercadoPago } from "@mercadopago/sdk-react";
 import type { IPaymentFormData } from "@mercadopago/sdk-react/esm/bricks/payment/type";
 import { payOrderAction, getOrderStatusAction, type CreatedOrder } from "@/lib/checkout";
 import { formatPrice } from "@/lib/format";
+import { trackEvent } from "@/lib/meta-pixel";
 
 // Chave pública, embutida no bundle do cliente pelo Next.js (NEXT_PUBLIC_*)
 // — não é segredo, é o par da MERCADO_PAGO_ACCESS_TOKEN (que fica só no servidor).
@@ -68,6 +69,7 @@ export default function CheckoutPayment({ order }: { order: CreatedOrder }) {
 
   async function handleSubmit({ formData }: IPaymentFormData) {
     setErrorMessage(null);
+    trackEvent("AddPaymentInfo", { value: order.total, currency: "BRL" });
     // formData vem tipado pelo SDK do Brick (sem índice genérico) — a
     // server action só precisa que seja um objeto plano serializável.
     const result = await payOrderAction(order.orderId, formData as unknown as Record<string, unknown>);

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { registerSchema, type RegisterInput } from "@/lib/validations";
 import { registerAction } from "@/lib/auth-actions";
+import { trackEvent } from "@/lib/meta-pixel";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function RegisterForm() {
       setServerError(result.error);
       return;
     }
+    trackEvent("CompleteRegistration", { status: true });
     router.push("/minha-conta");
     router.refresh();
   }

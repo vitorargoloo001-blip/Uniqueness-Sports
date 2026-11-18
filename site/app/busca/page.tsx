@@ -4,6 +4,7 @@ import Reveal from "@/components/Reveal";
 import ProductCard from "@/components/ProductCard";
 import { searchProducts } from "@/lib/products";
 import { NOINDEX } from "@/lib/seo";
+import MetaPixelEvent from "@/components/MetaPixelEvent";
 
 export const metadata: Metadata = { title: "Busca", ...NOINDEX };
 
@@ -16,6 +17,14 @@ export default async function BuscaPage({ searchParams }: PageProps<"/busca">) {
   return (
     <section className="px-5 py-14 md:px-8">
       <div className="mx-auto max-w-7xl">
+        {query && (
+          // key = termo: uma busca nova na mesma página remonta e dispara de novo.
+          <MetaPixelEvent
+            key={query}
+            event="Search"
+            data={{ search_string: query, content_ids: products.map((p) => p.id), content_type: "product" }}
+          />
+        )}
         <p className="eyebrow text-xs text-gray">Busca</p>
         <h1 className="mt-2 font-display text-3xl uppercase text-ink md:text-4xl">
           {query ? (

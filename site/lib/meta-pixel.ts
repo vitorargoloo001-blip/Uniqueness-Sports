@@ -11,7 +11,11 @@ export type MetaStandardEvent =
   | "ViewContent"
   | "AddToCart"
   | "InitiateCheckout"
-  | "Purchase";
+  | "AddPaymentInfo"
+  | "Purchase"
+  | "Search"
+  | "CompleteRegistration"
+  | "Contact";
 
 export type MetaEventData = {
   content_ids?: string[];
@@ -22,6 +26,8 @@ export type MetaEventData = {
   currency?: string;
   num_items?: number;
   order_id?: string;
+  search_string?: string;
+  status?: boolean;
 };
 
 declare global {
